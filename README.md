@@ -1,13 +1,10 @@
 # ONNX Image Classification
+This repo contains an example inference flutter app that ports a CNN image classifier to Flutter on device.
+For this purpose, we convert Googles `mobilenet`, but it should work for other models as well.
+
+
+<img src='assets/example.jpeg' style="float: right; margin-left: 10px;width:200px">
+
 ## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+To convert your model, or any HF model, to the `onnx` format, see the python-notebook `model_to_onnx/convert_model.ipynb`.
+Run the flutter application with `flutter run` after installing all dependencies
