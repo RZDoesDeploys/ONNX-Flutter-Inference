@@ -37,6 +37,7 @@ class _ImageClassificationPageState extends State<ImageClassificationPage> {
   File? _imageFile;
   final ImagePicker _picker = ImagePicker();
   final ValueNotifier<List<OutputResult>> predictions = ValueNotifier([]);
+  final ValueNotifier<int> inferenceTime = ValueNotifier(0);
 
   @override
   void initState() {
@@ -142,26 +143,17 @@ Float32List _preprocessImage(File imageFile) {
 
     // Perform inference
     try {
+      final stopwatch = Stopwatch()..start();
       final runOptions = OrtRunOptions();
       final outputs = await _session!.runAsync(runOptions, inputs);
       predictions.value = processOutputs(outputs, 5);
-      
+      inferenceTime.value = stopwatch.elapsedMilliseconds;
       // Release resources
       inputTensor.release();
       runOptions.release();
     } catch (e) {
       print("Error during inference: $e");
     }
-  }
-
-  // Process output to get the top predicted class
-  String _processOutput(List<OrtValue> outputs) {
-    // Assuming the output is a tensor of probabilities (softmax).
-    // You need to modify this based on your specific model's output format.
-    final outputTensor = outputs[0].value as Float32List;
-    final maxIndex = outputTensor.indexOf(outputTensor.reduce((a, b) => a > b ? a : b));
-
-    return "Predicted class index: $maxIndex";
   }
 
   @override
@@ -178,10 +170,18 @@ Float32List _preprocessImage(File imageFile) {
       ),
       body: Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: <Widget>[
-            if (_imageFile != null)
-              Image.file(_imageFile!, height: 200, width: 200),
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.4,
+                width: MediaQuery.of(context).size.width,
+                child: _imageFile == null 
+                          ? const Icon(Icons.image, size: 100)
+                          : Image.file(
+                              _imageFile!,
+                              fit: BoxFit.cover,
+                            ),
+              ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () => _pickImage(ImageSource.gallery),
@@ -190,16 +190,22 @@ Float32List _preprocessImage(File imageFile) {
             ElevatedButton(
               onPressed: () => _pickImage(ImageSource.camera),
               child: const Text('Capture Image from Camera'),
-            ),
-            
+            ),            
             ValueListenableBuilder<List<OutputResult>>(
               valueListenable: predictions,
               builder: (context, predictionList, _) {
                 if (predictionList.isEmpty) {
-                  return Center(child: Text('No predictions available'));
+                  return const Center(child: Text('No predictions available'));
                 }
-
-                return Column(
+                
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Text('Inference took ${inferenceTime.value}ms'),
+                  ),
+                  const SizedBox(height: 10.0),
+                  Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: predictionList.map((prediction) {
                     return Padding(
@@ -234,7 +240,7 @@ Float32List _preprocessImage(File imageFile) {
                       ),
                     );
                    }).toList(),
-                  );
+                  )]);
                 },
               ),
           ],
