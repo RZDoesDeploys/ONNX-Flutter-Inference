@@ -7,7 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:image/image.dart' as img;
-import 'dart:collection'; // For PriorityQueue
+import 'dart:collection';
 
 void main() {
   runApp(MyApp());
@@ -20,6 +20,7 @@ class MyApp extends StatelessWidget {
       title: 'ONNX Image Classification',
       theme: ThemeData(
         primarySwatch: Colors.blue,
+        primaryColor: Colors.brown
       ),
       home: ImageClassificationPage(),
     );
@@ -47,7 +48,7 @@ class _ImageClassificationPageState extends State<ImageClassificationPage> {
 
   // Load the ONNX model from the assets folder
   Future<void> _loadModel() async {
-    // try {
+    try {
       OrtEnv.instance.init();
       final sessionOptions = OrtSessionOptions();
       const assetFileName = 'assets/mobile.onnx';
@@ -56,9 +57,9 @@ class _ImageClassificationPageState extends State<ImageClassificationPage> {
 
       _session = OrtSession.fromBuffer(bytes, sessionOptions);
       print('ONNX Model loaded successfully');
-    // } catch (e) {
-    //   print("Error loading model: $e");
-    // }
+    } catch (e) {
+      print("Error loading model: $e");
+    }
   }
 
   // Pick image from gallery or camera
@@ -73,15 +74,12 @@ class _ImageClassificationPageState extends State<ImageClassificationPage> {
   }
 
 Float32List _preprocessImage(File imageFile) {
-    // Read the image from the file as bytes
+    // Read image and resize
     final Uint8List imageBytes = imageFile.readAsBytesSync();
-
-    // Decode the image
     img.Image? image = img.decodeImage(imageBytes);
-
-    // Resize the image to 224x224
     img.Image resizedImage = img.copyResize(image!, width: 224, height: 224);
 
+    // Fomat image bytes to list to later reshape correctly to tensor
     const int channels = 3;
     final floatList = Float32List(resizedImage.width * resizedImage.height * channels);
     for (int x = 0; x < resizedImage.width; x++) {
@@ -92,7 +90,6 @@ Float32List _preprocessImage(File imageFile) {
           } 
         }
       }
-
     return floatList;
   }
 
@@ -122,8 +119,6 @@ Float32List _preprocessImage(File imageFile) {
     }
     return [];
   }
-
-
 
   // Run inference on the selected image
   Future<void> _runInference(File imageFile) async {
@@ -167,6 +162,7 @@ Float32List _preprocessImage(File imageFile) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('ONNX Image Classification'),
+        centerTitle: true,
       ),
       body: Center(
         child: Column(
@@ -176,28 +172,50 @@ Float32List _preprocessImage(File imageFile) {
                 height: MediaQuery.of(context).size.height * 0.4,
                 width: MediaQuery.of(context).size.width,
                 child: _imageFile == null 
-                          ? const Icon(Icons.image, size: 100)
+                          ? IconButton(icon: Icon(
+                                          Icons.image,
+                                          size: 100,
+                                          color: Theme.of(context).primaryColor,
+                                        ),
+                                      color: Theme.of(context).primaryColor,
+                                      onPressed: () => _pickImage(ImageSource.gallery),)
                           : Image.file(
                               _imageFile!,
                               fit: BoxFit.cover,
                             ),
-              ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => _pickImage(ImageSource.gallery),
-              child: const Text('Pick Image from Gallery'),
+              ),              
+              const SizedBox(height: 10),   
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () => _pickImage(ImageSource.gallery),
+                    icon: const Icon(Icons.photo_library),
+                    label: const Text('Gallery'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      foregroundColor: Theme.of(context).primaryColor
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  ElevatedButton.icon(
+                    onPressed: () => _pickImage(ImageSource.camera),
+                    icon: const Icon(Icons.camera_alt),
+                    label: const Text('Camera'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      foregroundColor: Theme.of(context).primaryColor
+                    ),
+                  ),
+                ],
             ),
-            ElevatedButton(
-              onPressed: () => _pickImage(ImageSource.camera),
-              child: const Text('Capture Image from Camera'),
-            ),            
+            const SizedBox(height: 10),          
             ValueListenableBuilder<List<OutputResult>>(
               valueListenable: predictions,
               builder: (context, predictionList, _) {
                 if (predictionList.isEmpty) {
-                  return const Center(child: Text('No predictions available'));
-                }
-                
+                  return const Center(child: Text('Insert an image to obtain a prediction'));
+                }                
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -220,7 +238,7 @@ Float32List _preprocessImage(File imageFile) {
                                   value: prediction.confidence,
                                   minHeight: 20.0,
                                   backgroundColor: Colors.black38,
-                                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+                                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
                                 ),
                                 Center(
                                   child: Text(

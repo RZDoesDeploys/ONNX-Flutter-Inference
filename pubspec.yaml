@@ -63,7 +63,6 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   assets:
-    - assets/images/bar.jpg 
     - assets/mobile.onnx
 
   # To add assets to your application, add an assets section, like this:
